@@ -30,11 +30,11 @@ impl Constructor for BasicPage {
 impl Update for BasicPage {}
 
 impl Render<Html> for BasicPage {
-    type Children = Vec<Html>;
-    fn render(&self, children: Self::Children) -> Html {
+    type Children = (Attributes, Events, Vec<Html>);
+    fn render(&self, (attrs, events, children): Self::Children) -> Html {
         Self::styled(Html::div(
-            Attributes::new().class(Self::class("base")),
-            Events::new(),
+            attrs.class(Self::class("base")),
+            events,
             children,
         ))
     }
