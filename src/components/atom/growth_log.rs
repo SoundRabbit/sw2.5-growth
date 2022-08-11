@@ -42,7 +42,7 @@ impl Update for GrowthLog {
 impl Render<Html> for GrowthLog {
     type Children = ();
     fn render(&self, _children: Self::Children) -> Html {
-        Self::styled(self.render_lists())
+        Self::styled(self.render_pre())
     }
 }
 
@@ -59,23 +59,7 @@ impl GrowthLog {
         }
     }
 
-    fn empty() -> Html {
-        Html::span(Attributes::new(), Events::new(), vec![])
-    }
-
-    fn text(text: impl Into<String>) -> Html {
-        Html::span(Attributes::new(), Events::new(), vec![Html::text(text)])
-    }
-
-    fn attr(attr: usize) -> Html {
-        Html::span(
-            Attributes::new().class(Self::class(format!("a{}", attr).as_str())),
-            Events::new(),
-            vec![Html::text(Self::attr_text(attr))],
-        )
-    }
-
-    fn render_lists(&self) -> Html {
+    fn render_pre(&self) -> Html {
         let mut lists = vec![];
         let mut growth = self.attr.growth.clone();
 
@@ -83,53 +67,40 @@ impl GrowthLog {
             let mut items = vec![];
             for i in n..(n + 20) {
                 if let Some(a) = self.attr.raw_growth_dice.get(i) {
-                    items.push(Some(vec![
-                        Self::text(format!("#{}", i + 1)),
-                        Self::text(":"),
-                        Self::text(format!("[{}, {}]", a[0] + 1, a[1] + 1)),
+                    items.push(format!(
+                        "#{:>03}：[{}, {}]…{}",
+                        i + 1,
+                        a[0] + 1,
+                        a[1] + 1,
                         if growth[a[0]][a[1]] > 0 {
                             growth[a[0]][a[1]] -= 1;
-                            Self::attr(a[0])
+                            Self::attr_text(a[0])
                         } else if growth[a[1]][a[0]] > 0 {
                             growth[a[1]][a[0]] -= 1;
-                            Self::attr(a[1])
+                            Self::attr_text(a[1])
                         } else {
-                            Self::empty()
-                        },
-                    ]));
-                } else {
-                    items.push(Some(vec![
-                        Self::empty(),
-                        Self::empty(),
-                        Self::empty(),
-                        Self::empty(),
-                    ]));
+                            String::from("　　")
+                        }
+                    ));
                 }
             }
             lists.push(items);
         }
 
-        let cols = lists.len();
-        let mut elements = vec![];
+        let mut text = String::new();
         for j in 0..20 {
+            let mut cols = vec![];
             for i in 0..lists.len() {
-                let item = lists[i][j].take();
-                if let Some(item) = item {
-                    elements.push(item);
-                }
+                cols.push(lists[i][j].drain(..).collect::<String>());
             }
+            text += cols.join("　").as_str();
+            text += "\n";
         }
 
-        Html::div(
-            Attributes::new()
-                .class(Self::class("base"))
-                .class(Self::class("list"))
-                .style(
-                    "grid-template-columns",
-                    format!("repeat({}, max-content)", cols * 4),
-                ),
+        Html::pre(
+            Attributes::new().class(Self::class("base")),
             Events::new(),
-            elements.into_iter().flatten().collect(),
+            vec![Html::text(text)],
         )
     }
 }
@@ -138,45 +109,8 @@ impl Styled for GrowthLog {
     fn style() -> Style {
         style! {
             ".base" {
-                "height": "100%";
                 "padding-left": "0.5em";
                 "padding-right": "0.5em";
-            }
-
-            ".list" {
-                "display": "grid";
-                "grid-auto-rows": "max-content";
-                "column-gap": "0.25em";
-            }
-
-            ".a0" {
-                "background-color": "#e9fac8";
-                "color": "#212529";
-            }
-
-            ".a1" {
-                "background-color": "#d3f9d8";
-                "color": "#212529";
-            }
-
-            ".a2" {
-                "background-color": "#c5f6fa";
-                "color": "#212529";
-            }
-
-            ".a3" {
-                "background-color": "#d0ebff";
-                "color": "#212529";
-            }
-
-            ".a4" {
-                "background-color": "#e5dbff";
-                "color": "#212529";
-            }
-
-            ".a5" {
-                "background-color": "#ffdeeb";
-                "color": "#212529";
             }
         }
     }
