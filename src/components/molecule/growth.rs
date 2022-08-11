@@ -261,10 +261,19 @@ impl Growth {
         }
     }
 
+    fn count_used_with_growth(growth: &[[i32; 6]; 6], attr: [usize; 2]) -> i32 {
+        let [p, s] = attr;
+        if p == s {
+            growth[p][s]
+        } else {
+            growth[p][s] + growth[s][p]
+        }
+    }
+
     fn count_growthable(&self, count_used: bool, attr: [usize; 2], mut exclude: [bool; 6]) -> i32 {
         let [p, s] = attr;
         if !Self::validate_attr(p) || !Self::validate_attr(s) {
-            return -1;
+            return 0;
         }
 
         exclude[p] = true;
@@ -281,7 +290,8 @@ impl Growth {
             for i in 0..6 {
                 if !exclude[i] {
                     count += i32::min(
-                        self.growth_dice[usize::min(p, i)][usize::max(p, i)],
+                        self.growth_dice[usize::min(p, i)][usize::max(p, i)]
+                            - self.count_used([p, i]),
                         self.count_growthable(count_used, [i, s], exclude.clone()),
                     );
                 }
@@ -308,12 +318,14 @@ impl Growth {
         exclude[p] = true;
         exclude[s] = true;
 
-        if self.growth_dice[usize::min(p, s)][usize::max(p, s)] > self.count_used([p, s]) {
+        if self.growth_dice[usize::min(p, s)][usize::max(p, s)]
+            > Self::count_used_with_growth(&growth, [p, s])
+        {
             growth[p][s] += 1;
             return true;
         }
 
-        if self.growth[s][p] > 0 {
+        if growth[s][p] > 0 {
             growth[p][s] += 1;
             growth[s][p] -= 1;
             return true;
@@ -326,11 +338,11 @@ impl Growth {
                         && self.count_growthable(false, [i, s], exclude.clone()) > 0
                     {
                         let mut growth_tmp = growth.clone();
-                        if self.growth([i, s], exclude.clone(), &mut growth_tmp)
-                            && self.growth([p, i], exclude.clone(), &mut growth_tmp)
-                        {
-                            Self::clone_growth(growth, &growth_tmp);
-                            return true;
+                        if self.growth([i, s], exclude.clone(), &mut growth_tmp) {
+                            if self.growth([p, i], exclude.clone(), &mut growth_tmp) {
+                                Self::clone_growth(growth, &growth_tmp);
+                                return true;
+                            }
                         }
                     }
                 }
