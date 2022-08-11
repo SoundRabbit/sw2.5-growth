@@ -43,10 +43,6 @@ impl Update for Growth {
     fn on_load(mut self: Pin<&mut Self>, props: Props) -> Cmd<Self> {
         self.attr = props.attr;
 
-        for i in 0..6 {
-            self.attr.growth[i][i] = self.attr.growth_dice[i][i];
-        }
-
         Cmd::none()
     }
 

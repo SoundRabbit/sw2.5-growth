@@ -1,5 +1,6 @@
 #[derive(Clone)]
 pub struct AttrGrowth {
+    pub raw_growth_dice: Vec<[usize; 2]>,
     pub growth_dice: [[i32; 6]; 6],
     pub growth: [[i32; 6]; 6],
     pub attrs: [i32; 6],

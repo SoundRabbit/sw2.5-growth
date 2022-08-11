@@ -1,4 +1,7 @@
-use super::atom::btn::Btn;
+use super::atom::{
+    btn::Btn,
+    growth_log::{self, GrowthLog},
+};
 use super::molecule::growth::{self, Growth};
 use super::template::basic_page::{self, BasicPage};
 use crate::model::attr_growth::AttrGrowth;
@@ -37,6 +40,7 @@ impl Constructor for Sheet {
             attr: AttrGrowth {
                 attrs: [0, 0, 0, 0, 0, 0],
                 attr_mods: [0, 0, 0, 0, 0, 0],
+                raw_growth_dice: vec![],
                 growth_dice: [
                     [0, 0, 0, 0, 0, 0],
                     [0, 0, 0, 0, 0, 0],
@@ -71,6 +75,7 @@ impl Update for Sheet {
                     }
                 }
 
+                self.attr.raw_growth_dice.clear();
                 for p in 0..6 {
                     for s in 0..6 {
                         self.attr.growth_dice[p][s] = 0;
@@ -80,7 +85,14 @@ impl Update for Sheet {
                 for i in 0..(dices.len() / 2) {
                     let p = dices[i * 2];
                     let s = dices[i * 2 + 1];
+                    self.attr
+                        .raw_growth_dice
+                        .push([usize::min(p, s), usize::max(p, s)]);
                     self.attr.growth_dice[usize::min(p, s)][usize::max(p, s)] += 1;
+                }
+
+                for i in 0..6 {
+                    self.attr.growth[i][i] = self.attr.growth_dice[i][i];
                 }
 
                 Cmd::none()
@@ -110,41 +122,56 @@ impl Render<Html> for Sheet {
                 Events::new(),
                 vec![
                     Html::div(
-                        Attributes::new().class(Self::class("growth-dice")),
+                        Attributes::new().class(Self::class("sheet")),
                         Events::new(),
                         vec![
-                            Html::text("成長ダイス"),
-                            Html::textarea(
-                                Attributes::new().class(Self::class("growth-dice-input")),
-                                Events::new().on_input(self, |text| Msg::SetGrowthDice(text)),
-                                vec![],
+                            Html::div(
+                                Attributes::new().class(Self::class("growth-dice")),
+                                Events::new(),
+                                vec![
+                                    Html::text("成長ダイス"),
+                                    Html::textarea(
+                                        Attributes::new().class(Self::class("growth-dice-input")),
+                                        Events::new()
+                                            .on_input(self, |text| Msg::SetGrowthDice(text)),
+                                        vec![],
+                                    ),
+                                ],
+                            ),
+                            Growth::empty(
+                                self,
+                                None,
+                                growth::Props {
+                                    attr: self.attr.clone(),
+                                },
+                                Sub::map(|sub| match sub {
+                                    growth::On::SetAttrGrowth(attr) => Msg::SetAttrGrowth(attr),
+                                }),
+                            ),
+                            Btn::with_valiant(
+                                "primary",
+                                Attributes::new().class(Self::class("reset-btn")),
+                                Events::new().on_click(self, |_| {
+                                    Msg::SetGrowth([
+                                        [0, 0, 0, 0, 0, 0],
+                                        [0, 0, 0, 0, 0, 0],
+                                        [0, 0, 0, 0, 0, 0],
+                                        [0, 0, 0, 0, 0, 0],
+                                        [0, 0, 0, 0, 0, 0],
+                                        [0, 0, 0, 0, 0, 0],
+                                    ])
+                                }),
+                                vec![Html::text("成長をリセット")],
                             ),
                         ],
                     ),
-                    Growth::empty(
+                    GrowthLog::empty(
                         self,
                         None,
-                        growth::Props {
+                        growth_log::Props {
                             attr: self.attr.clone(),
                         },
-                        Sub::map(|sub| match sub {
-                            growth::On::SetAttrGrowth(attr) => Msg::SetAttrGrowth(attr),
-                        }),
-                    ),
-                    Btn::with_valiant(
-                        "primary",
-                        Attributes::new().class(Self::class("reset-btn")),
-                        Events::new().on_click(self, |_| {
-                            Msg::SetGrowth([
-                                [0, 0, 0, 0, 0, 0],
-                                [0, 0, 0, 0, 0, 0],
-                                [0, 0, 0, 0, 0, 0],
-                                [0, 0, 0, 0, 0, 0],
-                                [0, 0, 0, 0, 0, 0],
-                                [0, 0, 0, 0, 0, 0],
-                            ])
-                        }),
-                        vec![Html::text("成長をリセット")],
+                        Sub::none(),
                     ),
                 ],
             ),
@@ -157,8 +184,14 @@ impl Styled for Sheet {
         style! {
             ".base" {
                 "display": "grid";
+                "grid-template-columns": "max-content max-content";
+                "column-gap": "1rem";
+            }
+
+            ".sheet" {
+                "display": "grid";
                 "grid-template-columns": "max-content";
-                "grid-template-rows": "max-content max-content max-content";
+                "grid-auto-rows": "max-content";
                 "row-gap": "1rem";
             }
 
