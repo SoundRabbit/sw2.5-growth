@@ -7,17 +7,21 @@ use kagura::prelude::*;
 use nusa::prelude::*;
 
 pub struct Props {
-    pub growth_dice: [[usize; 6]; 6],
-    pub growth: [[usize; 6]; 6],
+    pub growth_dice: [[i32; 6]; 6],
+    pub growth: [[i32; 6]; 6],
 }
 
-pub enum Msg {}
+pub enum Msg {
+    Growth(usize, usize),
+}
 
-pub enum On {}
+pub enum On {
+    Growth([[i32; 6]; 6]),
+}
 
 pub struct Growth {
-    growth_dice: [[usize; 6]; 6],
-    growth: [[usize; 6]; 6],
+    growth_dice: [[i32; 6]; 6],
+    growth: [[i32; 6]; 6],
 }
 
 impl Component for Growth {
@@ -43,6 +47,18 @@ impl Update for Growth {
         self.growth = props.growth;
 
         Cmd::none()
+    }
+
+    fn update(mut self: Pin<&mut Self>, msg: Self::Msg) -> Cmd<Self> {
+        match msg {
+            Msg::Growth(p, s) => {
+                if self.growth([p, s], [false, false, false, false, false, false]) {
+                    Cmd::submit(On::Growth(self.growth.clone()))
+                } else {
+                    Cmd::none()
+                }
+            }
+        }
     }
 }
 
@@ -96,24 +112,35 @@ impl Growth {
             ));
 
             for s in 0..6 {
-                cells.push(Btn::secondary(
+                let count = (
+                    self.growth_dice[usize::min(p, s)][usize::max(p, s)] - self.count_used([p, s]),
+                    self.growth_dice[usize::min(p, s)][usize::max(p, s)],
+                );
+                let growthable = (
+                    self.count_growthable(true, [p, s], [false, false, false, false, false, false]),
+                    self.count_growthable(
+                        false,
+                        [p, s],
+                        [false, false, false, false, false, false],
+                    ),
+                );
+
+                cells.push(Btn::with_valiant(
+                    if count.1 == 0 && growthable.1 == 0 {
+                        "light"
+                    } else if count.0 == 0 {
+                        "secondary"
+                    } else {
+                        "primary"
+                    },
                     Attributes::new().class(Self::class("btn")),
-                    Events::new(),
+                    Events::new().on_click(self, move |_| Msg::Growth(p, s)),
                     vec![
-                        Html::text(
-                            (self.growth_dice[usize::min(p, s)][usize::max(p, s)]
-                                - self.growth[p][s]
-                                - self.growth[s][p])
-                                .to_string(),
-                        ),
+                        Html::text(self.growth[p][s].to_string()),
                         Html::element("br", Attributes::new(), Events::new(), vec![]),
                         Html::text(format!(
-                            "({}/{})",
-                            self.growth_dice[usize::min(p, s)][usize::max(p, s)].to_string(),
-                            self.count_growthable(
-                                [p, s],
-                                [false, false, false, false, false, false]
-                            )
+                            "残：{}({})/{}({})",
+                            count.0, growthable.0, count.1, growthable.1
                         )),
                     ],
                 ));
@@ -129,7 +156,16 @@ impl Growth {
         attr < 6
     }
 
-    fn count_growthable(&self, attr: [usize; 2], mut exclude: [bool; 6]) -> i32 {
+    fn count_used(&self, attr: [usize; 2]) -> i32 {
+        let [p, s] = attr;
+        if p == s {
+            self.growth[p][s]
+        } else {
+            self.growth[p][s] + self.growth[s][p]
+        }
+    }
+
+    fn count_growthable(&self, count_used: bool, attr: [usize; 2], mut exclude: [bool; 6]) -> i32 {
         let [p, s] = attr;
         if !Self::validate_attr(p) || !Self::validate_attr(s) {
             return -1;
@@ -138,16 +174,19 @@ impl Growth {
         exclude[p] = true;
         exclude[s] = true;
 
-        let mut count = self.growth_dice[usize::min(p, s)][usize::max(p, s)] as i32
-            - self.growth[p][s] as i32
-            - self.growth[s][p] as i32;
+        let mut count = self.growth_dice[usize::min(p, s)][usize::max(p, s)]
+            - if count_used {
+                self.count_used([p, s])
+            } else {
+                0
+            };
 
         if p != s {
             for i in 0..6 {
                 if !exclude[i] {
                     count += i32::min(
-                        self.growth_dice[usize::min(p, i)][usize::max(p, i)] as i32,
-                        self.count_growthable([i, s], exclude.clone()),
+                        self.growth_dice[usize::min(p, i)][usize::max(p, i)],
+                        self.count_growthable(count_used, [i, s], exclude.clone()),
                     );
                 }
             }
@@ -156,7 +195,42 @@ impl Growth {
         count
     }
 
-    fn growth(&mut self, attr: [usize; 2]) {}
+    fn growth(self: &mut Pin<&mut Self>, attr: [usize; 2], mut exclude: [bool; 6]) -> bool {
+        let [p, s] = attr;
+        if !Self::validate_attr(p) || !Self::validate_attr(s) {
+            return false;
+        }
+
+        exclude[p] = true;
+        exclude[s] = true;
+
+        if self.growth_dice[usize::min(p, s)][usize::max(p, s)] > self.count_used([p, s]) {
+            self.growth[p][s] += 1;
+            return true;
+        }
+
+        if self.growth[s][p] > 0 {
+            self.growth[p][s] += 1;
+            self.growth[s][p] -= 1;
+            return true;
+        }
+
+        if p != s {
+            for i in 0..6 {
+                if !exclude[i] {
+                    if self.count_growthable(false, [p, i], exclude.clone()) > 0
+                        && self.count_growthable(false, [i, s], exclude.clone()) > 0
+                    {
+                        self.growth([i, s], exclude.clone());
+                        self.growth([p, i], exclude.clone());
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
 }
 
 impl Styled for Growth {
