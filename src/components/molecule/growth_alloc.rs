@@ -12,7 +12,7 @@ pub struct Props {
 }
 
 pub enum Msg {
-    Growth(usize, usize),
+    GrowthAlloc(usize, usize),
     SetAttr(usize, i32),
     SetAttrMod(usize, i32),
 }
@@ -21,25 +21,25 @@ pub enum On {
     SetAttrGrowth(AttrGrowth),
 }
 
-pub struct Growth {
+pub struct GrowthAlloc {
     attr: AttrGrowth,
 }
 
-impl Component for Growth {
+impl Component for GrowthAlloc {
     type Props = Props;
     type Msg = Msg;
     type Event = On;
 }
 
-impl HtmlComponent for Growth {}
+impl HtmlComponent for GrowthAlloc {}
 
-impl Constructor for Growth {
+impl Constructor for GrowthAlloc {
     fn constructor(props: Self::Props) -> Self {
         Self { attr: props.attr }
     }
 }
 
-impl Update for Growth {
+impl Update for GrowthAlloc {
     fn on_load(mut self: Pin<&mut Self>, props: Props) -> Cmd<Self> {
         self.attr = props.attr;
 
@@ -48,7 +48,7 @@ impl Update for Growth {
 
     fn update(mut self: Pin<&mut Self>, msg: Self::Msg) -> Cmd<Self> {
         match msg {
-            Msg::Growth(p, s) => {
+            Msg::GrowthAlloc(p, s) => {
                 if self.attr.growth([p, s]) {
                     Cmd::submit(On::SetAttrGrowth(self.attr.clone()))
                 } else {
@@ -67,7 +67,7 @@ impl Update for Growth {
     }
 }
 
-impl Render<Html> for Growth {
+impl Render<Html> for GrowthAlloc {
     type Children = ();
     fn render(&self, _children: Self::Children) -> Html {
         Self::styled(Html::div(
@@ -78,7 +78,7 @@ impl Render<Html> for Growth {
     }
 }
 
-impl Growth {
+impl GrowthAlloc {
     fn empty() -> Html {
         Html::div(Attributes::new(), Events::new(), vec![])
     }
@@ -120,7 +120,15 @@ impl Growth {
         cells.push(Self::empty());
         cells.push(Self::text("能力値修正"));
         cells.push(Self::empty());
-        cells.push(Self::text(format!("成長回数（合計{}回）", sum_of_growth)));
+        cells.push(Html::div(
+            Attributes::new(),
+            Events::new(),
+            vec![
+                Html::text("成長回数"),
+                Html::element("br", Attributes::new(), Events::new(), vec![]),
+                Html::text(format!("(合計{}回)", sum_of_growth)),
+            ],
+        ));
         cells.push(Self::text("器用"));
         cells.push(Self::text("敏捷"));
         cells.push(Self::text("筋力"));
@@ -207,13 +215,13 @@ impl Growth {
                             )
                             .as_str(),
                         )),
-                    Events::new().on_click(self, move |_| Msg::Growth(p, s)),
+                    Events::new().on_click(self, move |_| Msg::GrowthAlloc(p, s)),
                     vec![
                         Html::text(self.attr.growth[p][s].to_string()),
                         Html::element("br", Attributes::new(), Events::new(), vec![]),
                         Html::text(format!(
-                            "残：{}({})/{}({})",
-                            count.0, growthable.0, count.1, growthable.1
+                            "{}/{}({}/{})",
+                            count.0, count.1, growthable.0, growthable.1
                         )),
                     ],
                 ));
@@ -230,9 +238,9 @@ impl Growth {
     }
 }
 
-impl Growth {}
+impl GrowthAlloc {}
 
-impl Styled for Growth {
+impl Styled for GrowthAlloc {
     fn style() -> Style {
         style! {
             ".tabular" {

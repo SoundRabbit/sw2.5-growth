@@ -42,11 +42,7 @@ impl Update for GrowthLog {
 impl Render<Html> for GrowthLog {
     type Children = ();
     fn render(&self, _children: Self::Children) -> Html {
-        Self::styled(Html::div(
-            Attributes::new().class(Self::class("base")),
-            Events::new(),
-            self.render_list(),
-        ))
+        Self::styled(self.render_lists())
     }
 }
 
@@ -79,27 +75,62 @@ impl GrowthLog {
         )
     }
 
-    fn render_list(&self) -> Vec<Html> {
-        let mut items = vec![];
+    fn render_lists(&self) -> Html {
+        let mut lists = vec![];
         let mut growth = self.attr.growth.clone();
 
-        for (i, a) in self.attr.raw_growth_dice.iter().enumerate() {
-            items.push(Self::text(format!("{}", i)));
-            items.push(Self::text(":"));
-            items.push(Self::text(format!("[{}, {}]", a[0] + 1, a[1] + 1)));
+        for n in (0..self.attr.raw_growth_dice.len()).step_by(20) {
+            let mut items = vec![];
+            for i in n..(n + 20) {
+                if let Some(a) = self.attr.raw_growth_dice.get(i) {
+                    items.push(Some(vec![
+                        Self::text(format!("#{}", i + 1)),
+                        Self::text(":"),
+                        Self::text(format!("[{}, {}]", a[0] + 1, a[1] + 1)),
+                        if growth[a[0]][a[1]] > 0 {
+                            growth[a[0]][a[1]] -= 1;
+                            Self::attr(a[0])
+                        } else if growth[a[1]][a[0]] > 0 {
+                            growth[a[1]][a[0]] -= 1;
+                            Self::attr(a[1])
+                        } else {
+                            Self::empty()
+                        },
+                    ]));
+                } else {
+                    items.push(Some(vec![
+                        Self::empty(),
+                        Self::empty(),
+                        Self::empty(),
+                        Self::empty(),
+                    ]));
+                }
+            }
+            lists.push(items);
+        }
 
-            if growth[a[0]][a[1]] > 0 {
-                items.push(Self::attr(a[0]));
-                growth[a[0]][a[1]] -= 1;
-            } else if growth[a[1]][a[0]] > 0 {
-                items.push(Self::attr(a[1]));
-                growth[a[1]][a[0]] -= 1;
-            } else {
-                items.push(Self::empty())
+        let cols = lists.len();
+        let mut elements = vec![];
+        for j in 0..20 {
+            for i in 0..lists.len() {
+                let item = lists[i][j].take();
+                if let Some(item) = item {
+                    elements.push(item);
+                }
             }
         }
 
-        items
+        Html::div(
+            Attributes::new()
+                .class(Self::class("base"))
+                .class(Self::class("list"))
+                .style(
+                    "grid-template-columns",
+                    format!("repeat({}, max-content)", cols * 4),
+                ),
+            Events::new(),
+            elements.into_iter().flatten().collect(),
+        )
     }
 }
 
@@ -107,13 +138,14 @@ impl Styled for GrowthLog {
     fn style() -> Style {
         style! {
             ".base" {
-                "display": "grid";
-                "grid-template-columns": "repeat(4, max-content)";
-                "grid-auto-rows": "max-content";
                 "height": "100%";
-                "overflow-y": "scroll";
                 "padding-left": "0.5em";
                 "padding-right": "0.5em";
+            }
+
+            ".list" {
+                "display": "grid";
+                "grid-auto-rows": "max-content";
                 "column-gap": "0.25em";
             }
 

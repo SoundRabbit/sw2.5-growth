@@ -1,3 +1,3 @@
-pub mod growth;
+pub mod growth_alloc;
 
 use super::*;

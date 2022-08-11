@@ -1,7 +1,7 @@
 use kagura::prelude::*;
 use nusa::prelude::*;
 
-use super::page::sheet::{self, Sheet};
+use super::page::growth_sheet::{self, GrowthSheet};
 
 pub struct Props {}
 
@@ -30,6 +30,6 @@ impl Update for App {}
 impl Render<Html> for App {
     type Children = ();
     fn render(&self, _children: Self::Children) -> Html {
-        Sheet::empty(self, None, sheet::Props {}, Sub::none())
+        GrowthSheet::empty(self, None, growth_sheet::Props {}, Sub::none())
     }
 }

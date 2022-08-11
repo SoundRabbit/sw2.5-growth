@@ -2,7 +2,7 @@ use super::atom::{
     btn::Btn,
     growth_log::{self, GrowthLog},
 };
-use super::molecule::growth::{self, Growth};
+use super::molecule::growth_alloc::{self, GrowthAlloc};
 use super::template::basic_page::{self, BasicPage};
 use crate::model::attr_growth::AttrGrowth;
 use isaribi::{
@@ -22,19 +22,19 @@ pub enum Msg {
 
 pub enum On {}
 
-pub struct Sheet {
+pub struct GrowthSheet {
     attr: AttrGrowth,
 }
 
-impl Component for Sheet {
+impl Component for GrowthSheet {
     type Props = Props;
     type Msg = Msg;
     type Event = On;
 }
 
-impl HtmlComponent for Sheet {}
+impl HtmlComponent for GrowthSheet {}
 
-impl Constructor for Sheet {
+impl Constructor for GrowthSheet {
     fn constructor(_props: Self::Props) -> Self {
         Self {
             attr: AttrGrowth {
@@ -62,7 +62,7 @@ impl Constructor for Sheet {
     }
 }
 
-impl Update for Sheet {
+impl Update for GrowthSheet {
     fn update(mut self: Pin<&mut Self>, msg: Msg) -> Cmd<Self> {
         match msg {
             Msg::SetGrowthDice(text) => {
@@ -109,7 +109,7 @@ impl Update for Sheet {
     }
 }
 
-impl Render<Html> for Sheet {
+impl Render<Html> for GrowthSheet {
     type Children = ();
     fn render(&self, _children: Self::Children) -> Html {
         Self::styled(BasicPage::new(
@@ -122,7 +122,7 @@ impl Render<Html> for Sheet {
                 Events::new(),
                 vec![
                     Html::div(
-                        Attributes::new().class(Self::class("sheet")),
+                        Attributes::new().class(Self::class("GrowthSheet")),
                         Events::new(),
                         vec![
                             Html::div(
@@ -138,14 +138,16 @@ impl Render<Html> for Sheet {
                                     ),
                                 ],
                             ),
-                            Growth::empty(
+                            GrowthAlloc::empty(
                                 self,
                                 None,
-                                growth::Props {
+                                growth_alloc::Props {
                                     attr: self.attr.clone(),
                                 },
                                 Sub::map(|sub| match sub {
-                                    growth::On::SetAttrGrowth(attr) => Msg::SetAttrGrowth(attr),
+                                    growth_alloc::On::SetAttrGrowth(attr) => {
+                                        Msg::SetAttrGrowth(attr)
+                                    }
                                 }),
                             ),
                             Btn::with_valiant(
@@ -179,16 +181,17 @@ impl Render<Html> for Sheet {
     }
 }
 
-impl Styled for Sheet {
+impl Styled for GrowthSheet {
     fn style() -> Style {
         style! {
             ".base" {
                 "display": "grid";
-                "grid-template-columns": "max-content max-content";
+                "grid-template-columns": "max-content";
+                "grid-template-rows": "max-content max-content";
                 "column-gap": "1rem";
             }
 
-            ".sheet" {
+            ".GrowthSheet" {
                 "display": "grid";
                 "grid-template-columns": "max-content";
                 "grid-auto-rows": "max-content";
