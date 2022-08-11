@@ -64,7 +64,11 @@ impl AttrGrowth {
                 if !exclude[i] {
                     count += i32::min(
                         self.growth_dice[usize::min(p, i)][usize::max(p, i)]
-                            - self.count_used([p, i]),
+                            - if count_used {
+                                self.count_used([p, i])
+                            } else {
+                                0
+                            },
                         self.count_growthable_with_cxclude(count_used, [i, s], exclude.clone()),
                     );
                 }
