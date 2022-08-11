@@ -13,6 +13,8 @@ pub struct Props {
 
 pub enum Msg {
     Growth(usize, usize),
+    SetAttr(usize, i32),
+    SetAttrMod(usize, i32),
 }
 
 pub enum On {
@@ -67,6 +69,14 @@ impl Update for Growth {
                 } else {
                     Cmd::none()
                 }
+            }
+            Msg::SetAttr(i, v) => {
+                self.attrs[i] = v;
+                Cmd::none()
+            }
+            Msg::SetAttrMod(i, v) => {
+                self.attr_mods[i] = v;
+                Cmd::none()
             }
         }
     }
@@ -136,6 +146,8 @@ impl Growth {
 
         for p in 0..6 {
             let growth_count = self.growth[p].iter().fold(0, |g, sum| sum + g);
+            let attr = self.attrs[p];
+            let attr_mod = self.attr_mods[p];
             cells.push(Self::cell_text(
                 Attributes::new().class(Self::class(format!("n{}", p).as_str())),
                 Self::attr_text(p),
@@ -144,10 +156,15 @@ impl Growth {
                 Attributes::new()
                     .class(Self::class("cell-input"))
                     .class(Self::class(format!("n{}", p).as_str()))
-                    .value(self.attrs[p].to_string())
+                    .value(attr.to_string())
                     .type_("number")
                     .nut("step", 1),
-                Events::new(),
+                Events::new().on_input(self, move |a| {
+                    a.parse::<i32>()
+                        .ok()
+                        .map(move |a| Msg::SetAttr(p, a))
+                        .unwrap_or(Msg::SetAttr(p, attr))
+                }),
                 vec![],
             ));
             cells.push(Self::text("＋"));
@@ -155,10 +172,15 @@ impl Growth {
                 Attributes::new()
                     .class(Self::class("cell-input"))
                     .class(Self::class(format!("n{}", p).as_str()))
-                    .value(self.attr_mods[p].to_string())
+                    .value(attr_mod.to_string())
                     .type_("number")
                     .nut("step", 1),
-                Events::new(),
+                Events::new().on_input(self, move |a| {
+                    a.parse::<i32>()
+                        .ok()
+                        .map(move |a| Msg::SetAttrMod(p, a))
+                        .unwrap_or(Msg::SetAttrMod(p, attr_mod))
+                }),
                 vec![],
             ));
             cells.push(Self::text("＋"));
@@ -217,7 +239,7 @@ impl Growth {
             cells.push(Self::text("＝"));
             cells.push(Self::cell_text(
                 Attributes::new().class(Self::class(format!("n{}", p).as_str())),
-                (self.attrs[p] + self.attr_mods[p] + growth_count).to_string(),
+                (attr + attr_mod + growth_count).to_string(),
             ));
         }
 
