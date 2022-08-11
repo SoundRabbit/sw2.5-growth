@@ -7,6 +7,7 @@ extern crate wasm_bindgen_futures;
 extern crate web_sys;
 
 mod components;
+mod model;
 
 use components::app::{self, App};
 use nusa::prelude::*;

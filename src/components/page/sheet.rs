@@ -1,6 +1,7 @@
 use super::atom::btn::Btn;
 use super::molecule::growth::{self, Growth};
 use super::template::basic_page::{self, BasicPage};
+use crate::model::attr_growth::AttrGrowth;
 use isaribi::{
     style,
     styled::{Style, Styled},
@@ -13,13 +14,13 @@ pub struct Props {}
 pub enum Msg {
     SetGrowthDice(String),
     SetGrowth([[i32; 6]; 6]),
+    SetAttrGrowth(AttrGrowth),
 }
 
 pub enum On {}
 
 pub struct Sheet {
-    growth_dice: [[i32; 6]; 6],
-    growth: [[i32; 6]; 6],
+    attr: AttrGrowth,
 }
 
 impl Component for Sheet {
@@ -33,22 +34,26 @@ impl HtmlComponent for Sheet {}
 impl Constructor for Sheet {
     fn constructor(_props: Self::Props) -> Self {
         Self {
-            growth_dice: [
-                [0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0],
-            ],
-            growth: [
-                [0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0],
-            ],
+            attr: AttrGrowth {
+                attrs: [0, 0, 0, 0, 0, 0],
+                attr_mods: [0, 0, 0, 0, 0, 0],
+                growth_dice: [
+                    [0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0],
+                ],
+                growth: [
+                    [0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0],
+                ],
+            },
         }
     }
 }
@@ -68,20 +73,24 @@ impl Update for Sheet {
 
                 for p in 0..6 {
                     for s in 0..6 {
-                        self.growth_dice[p][s] = 0;
+                        self.attr.growth_dice[p][s] = 0;
                     }
                 }
 
                 for i in 0..(dices.len() / 2) {
                     let p = dices[i * 2];
                     let s = dices[i * 2 + 1];
-                    self.growth_dice[usize::min(p, s)][usize::max(p, s)] += 1;
+                    self.attr.growth_dice[usize::min(p, s)][usize::max(p, s)] += 1;
                 }
 
                 Cmd::none()
             }
+            Msg::SetAttrGrowth(attr) => {
+                self.attr = attr;
+                Cmd::none()
+            }
             Msg::SetGrowth(growth) => {
-                self.growth = growth;
+                self.attr.growth = growth;
                 Cmd::none()
             }
         }
@@ -116,11 +125,10 @@ impl Render<Html> for Sheet {
                         self,
                         None,
                         growth::Props {
-                            growth_dice: self.growth_dice.clone(),
-                            growth: self.growth.clone(),
+                            attr: self.attr.clone(),
                         },
                         Sub::map(|sub| match sub {
-                            growth::On::Growth(growth) => Msg::SetGrowth(growth),
+                            growth::On::SetAttrGrowth(attr) => Msg::SetAttrGrowth(attr),
                         }),
                     ),
                     Btn::with_valiant(
