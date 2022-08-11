@@ -7,7 +7,7 @@ module.exports = {
     experiments: { syncWebAssembly: true },
     entry: "./template",
     output: {
-        path: path.join(__dirname, "./dist")
+        path: path.join(__dirname, "./docs")
     },
     resolve: {
         extensions: [".js"]
