@@ -33,7 +33,7 @@ impl Render<Html> for BasicPage {
     type Children = (Attributes, Events, Vec<Html>);
     fn render(&self, (attrs, events, children): Self::Children) -> Html {
         Self::styled(Html::div(
-            attrs.class(Self::class("base")),
+            attrs.class("pure-form").class(Self::class("base")),
             events,
             children,
         ))
@@ -49,7 +49,8 @@ impl Styled for BasicPage {
                 "left": "0";
                 "width": "100vw";
                 "height": "100vh";
-                "overflow": "hidden";
+                "overflow-x": "scroll";
+                "overflow-y": "hidden";
             }
         }
     }

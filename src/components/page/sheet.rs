@@ -1,3 +1,4 @@
+use super::atom::btn::Btn;
 use super::molecule::growth::{self, Growth};
 use super::template::basic_page::{self, BasicPage};
 use isaribi::{
@@ -90,20 +91,26 @@ impl Update for Sheet {
 impl Render<Html> for Sheet {
     type Children = ();
     fn render(&self, _children: Self::Children) -> Html {
-        BasicPage::new(
+        Self::styled(BasicPage::new(
             self,
             None,
             basic_page::Props {},
             Sub::none(),
             (
-                Attributes::new(),
+                Attributes::new().class(Self::class("base")),
                 Events::new(),
                 vec![
-                    Html::text("成長ダイス"),
-                    Html::textarea(
-                        Attributes::new(),
-                        Events::new().on_input(self, |text| Msg::SetGrowthDice(text)),
-                        vec![],
+                    Html::div(
+                        Attributes::new().class(Self::class("growth-dice")),
+                        Events::new(),
+                        vec![
+                            Html::text("成長ダイス"),
+                            Html::textarea(
+                                Attributes::new().class(Self::class("growth-dice-input")),
+                                Events::new().on_input(self, |text| Msg::SetGrowthDice(text)),
+                                vec![],
+                            ),
+                        ],
                     ),
                     Growth::empty(
                         self,
@@ -116,14 +123,52 @@ impl Render<Html> for Sheet {
                             growth::On::Growth(growth) => Msg::SetGrowth(growth),
                         }),
                     ),
+                    Btn::with_valiant(
+                        "primary",
+                        Attributes::new().class(Self::class("reset-btn")),
+                        Events::new().on_click(self, |_| {
+                            Msg::SetGrowth([
+                                [0, 0, 0, 0, 0, 0],
+                                [0, 0, 0, 0, 0, 0],
+                                [0, 0, 0, 0, 0, 0],
+                                [0, 0, 0, 0, 0, 0],
+                                [0, 0, 0, 0, 0, 0],
+                                [0, 0, 0, 0, 0, 0],
+                            ])
+                        }),
+                        vec![Html::text("成長をリセット")],
+                    ),
                 ],
             ),
-        )
+        ))
     }
 }
 
 impl Styled for Sheet {
     fn style() -> Style {
-        style! {}
+        style! {
+            ".base" {
+                "display": "grid";
+                "grid-template-columns": "max-content";
+                "grid-template-rows": "max-content max-content max-content";
+                "row-gap": "1rem";
+            }
+
+            ".growth-dice" {
+                "display": "grid";
+                "grid-template-columns": "1fr";
+                "grid-template-rows": "max-content max-content";
+            }
+
+            ".growth-dice-input" {
+                "width": "100%";
+                "height": "5em";
+                "resize": "none";
+            }
+
+            ".reset-btn" {
+                "justify-self": "end";
+            }
+        }
     }
 }

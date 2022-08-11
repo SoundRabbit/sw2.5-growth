@@ -22,6 +22,8 @@ pub enum On {
 pub struct Growth {
     growth_dice: [[i32; 6]; 6],
     growth: [[i32; 6]; 6],
+    attrs: [i32; 6],
+    attr_mods: [i32; 6],
 }
 
 impl Component for Growth {
@@ -37,6 +39,8 @@ impl Constructor for Growth {
         Self {
             growth_dice: props.growth_dice,
             growth: props.growth,
+            attrs: [0, 0, 0, 0, 0, 0],
+            attr_mods: [0, 0, 0, 0, 0, 0],
         }
     }
 }
@@ -82,6 +86,14 @@ impl Growth {
         Html::div(Attributes::new(), Events::new(), vec![Html::text(text)])
     }
 
+    fn cell_text(attrs: Attributes, text: impl Into<String>) -> Html {
+        Html::div(
+            attrs.class(Self::class("cell")),
+            Events::new(),
+            vec![Self::text(text)],
+        )
+    }
+
     fn attr_text(attr: usize) -> String {
         match attr {
             0 => String::from("器用"),
@@ -96,19 +108,61 @@ impl Growth {
     fn render_tabular(&self) -> Vec<Html> {
         let mut cells = vec![];
 
+        let sum_of_growth = self
+            .growth
+            .iter()
+            .fold(0, |sum, gs| sum + gs.iter().fold(0, |sum, g| sum + g));
+
         cells.push(Self::empty());
-        cells.push(Self::text("成長回数"));
+        cells.push(Self::text("自然能力値"));
+        cells.push(Self::empty());
+        cells.push(Self::text("能力値修正"));
+        cells.push(Self::empty());
+        cells.push(Self::text(format!("成長回数（合計{}回）", sum_of_growth)));
         cells.push(Self::text("器用"));
         cells.push(Self::text("敏捷"));
         cells.push(Self::text("筋力"));
         cells.push(Self::text("生命"));
         cells.push(Self::text("知力"));
         cells.push(Self::text("精神"));
+        cells.push(Self::empty());
+        cells.push(Self::text("能力値合計"));
 
         for p in 0..6 {
-            cells.push(Self::text(Self::attr_text(p)));
-            cells.push(Self::text(
-                self.growth[p].iter().fold(0, |g, sum| sum + g).to_string(),
+            let growth_count = self.growth[p].iter().fold(0, |g, sum| sum + g);
+            cells.push(Self::cell_text(
+                Attributes::new().class(Self::class(format!("n{}", p).as_str())),
+                Self::attr_text(p),
+            ));
+            cells.push(Html::input(
+                Attributes::new()
+                    .class(Self::class("cell-input"))
+                    .class(Self::class(format!("n{}", p).as_str()))
+                    .value(self.attrs[p].to_string())
+                    .type_("number")
+                    .nut("step", 1),
+                Events::new(),
+                vec![],
+            ));
+            cells.push(Self::text("＋"));
+            cells.push(Html::input(
+                Attributes::new()
+                    .class(Self::class("cell-input"))
+                    .class(Self::class(format!("n{}", p).as_str()))
+                    .value(self.attr_mods[p].to_string())
+                    .type_("number")
+                    .nut("step", 1),
+                Events::new(),
+                vec![],
+            ));
+            cells.push(Self::text("＋"));
+            cells.push(Self::cell_text(
+                Attributes::new().class(if growth_count > 0 {
+                    Self::class(format!("g{}", p).as_str())
+                } else {
+                    Self::class(format!("n{}", p).as_str())
+                }),
+                growth_count.to_string(),
             ));
 
             for s in 0..6 {
@@ -125,15 +179,23 @@ impl Growth {
                     ),
                 );
 
-                cells.push(Btn::with_valiant(
-                    if count.1 == 0 && growthable.1 == 0 {
-                        "light"
-                    } else if count.0 == 0 {
-                        "secondary"
-                    } else {
-                        "primary"
-                    },
-                    Attributes::new().class(Self::class("btn")),
+                cells.push(Btn::no_valiant(
+                    Attributes::new()
+                        .class(Self::class("btn"))
+                        .class(Self::class(
+                            format!(
+                                "{}{}",
+                                if count.1 == 0 && growthable.1 == 0 {
+                                    "n"
+                                } else if self.growth[p][s] == 0 {
+                                    "t"
+                                } else {
+                                    "g"
+                                },
+                                p
+                            )
+                            .as_str(),
+                        )),
                     Events::new().on_click(self, move |_| Msg::Growth(p, s)),
                     vec![
                         Html::text(self.growth[p][s].to_string()),
@@ -145,6 +207,12 @@ impl Growth {
                     ],
                 ));
             }
+
+            cells.push(Self::text("＝"));
+            cells.push(Self::cell_text(
+                Attributes::new().class(Self::class(format!("n{}", p).as_str())),
+                (self.attrs[p] + self.attr_mods[p] + growth_count).to_string(),
+            ));
         }
 
         cells
@@ -238,8 +306,8 @@ impl Styled for Growth {
         style! {
             ".tabular" {
                 "display": "grid";
-                "grid-template-columns": "repeat(8, max-content)";
-                "grid-template-rows": "repeat(7, max-content)";
+                "grid-template-columns": "repeat(14, max-content)";
+                "grid-template-rows": "repeat(8, max-content)";
                 "align-items": "center";
                 "justify-items": "center";
                 "row-gap": "0.2rem";
@@ -248,6 +316,111 @@ impl Styled for Growth {
 
             ".btn" {
                 "line-height": "1";
+                "justify-self": "stretch";
+            }
+
+            ".cell" {
+                "display": "grid";
+                "justify-self": "stretch";
+                "align-self": "stretch";
+                "justify-content": "center";
+                "align-content": "center";
+            }
+
+            ".cell-input" {
+                "justify-self": "stretch";
+                "align-self": "stretch";
+                "max-width": "6em";
+            }
+
+            ".n0" {
+                "background-color": "#e9fac8";
+                "color": "#212529";
+            }
+
+            ".t0" {
+                "background-color": "#94d82d";
+                "color": "#212529";
+            }
+
+            ".g0" {
+                "background-color": "#5c940d";
+                "color": "#f8f9fa";
+            }
+
+            ".n1" {
+                "background-color": "#d3f9d8";
+                "color": "#212529";
+            }
+
+            ".t1" {
+                "background-color": "#51cf66";
+                "color": "#212529";
+            }
+
+            ".g1" {
+                "background-color": "#2b8a3e";
+                "color": "#f8f9fa";
+            }
+
+            ".n2" {
+                "background-color": "#c5f6fa";
+                "color": "#212529";
+            }
+
+            ".t2" {
+                "background-color": "#22b8cf";
+                "color": "#212529";
+            }
+
+            ".g2" {
+                "background-color": "#0b7285";
+                "color": "#f8f9fa";
+            }
+
+            ".n3" {
+                "background-color": "#d0ebff";
+                "color": "#212529";
+            }
+
+            ".t3" {
+                "background-color": "#339af0";
+                "color": "#212529";
+            }
+
+            ".g3" {
+                "background-color": "#1864ab";
+                "color": "#f8f9fa";
+            }
+
+            ".n4" {
+                "background-color": "#e5dbff";
+                "color": "#212529";
+            }
+
+            ".t4" {
+                "background-color": "#845ef7";
+                "color": "#212529";
+            }
+
+            ".g4" {
+                "background-color": "#5f3dc4";
+                "color": "#f8f9fa";
+            }
+
+            ".n5" {
+                "background-color": "#ffdeeb";
+                "color": "#212529";
+            }
+
+            ".t5" {
+                "background-color": "#f06595";
+                "color": "#212529";
+            }
+
+            ".g5" {
+                "background-color": "#a61e4d";
+                "color": "#f8f9fa";
             }
         }
     }

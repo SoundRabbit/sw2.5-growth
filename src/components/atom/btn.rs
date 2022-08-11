@@ -8,6 +8,10 @@ use nusa::prelude::*;
 pub struct Btn {}
 
 impl Btn {
+    pub fn no_valiant(attrs: Attributes, events: Events, children: Vec<Html>) -> Html {
+        Self::styled(Html::button(attrs.class("pure-button"), events, children))
+    }
+
     pub fn with_valiant(
         valiant: &str,
         attrs: Attributes,
