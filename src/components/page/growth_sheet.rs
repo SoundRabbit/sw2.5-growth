@@ -16,7 +16,7 @@ pub struct Props {}
 
 pub enum Msg {
     SetGrowthDice(String),
-    SetGrowth([[i32; 6]; 6]),
+    ResetGrowth,
     SetAttrGrowth(AttrGrowth),
 }
 
@@ -101,8 +101,18 @@ impl Update for GrowthSheet {
                 self.attr = attr;
                 Cmd::none()
             }
-            Msg::SetGrowth(growth) => {
-                self.attr.growth = growth;
+            Msg::ResetGrowth => {
+                self.attr.growth = [
+                    [0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0],
+                ];
+                for i in 0..6 {
+                    self.attr.growth[i][i] = self.attr.growth_dice[i][i];
+                }
                 Cmd::none()
             }
         }
@@ -153,16 +163,7 @@ impl Render<Html> for GrowthSheet {
                             Btn::with_valiant(
                                 "primary",
                                 Attributes::new().class(Self::class("reset-btn")),
-                                Events::new().on_click(self, |_| {
-                                    Msg::SetGrowth([
-                                        [0, 0, 0, 0, 0, 0],
-                                        [0, 0, 0, 0, 0, 0],
-                                        [0, 0, 0, 0, 0, 0],
-                                        [0, 0, 0, 0, 0, 0],
-                                        [0, 0, 0, 0, 0, 0],
-                                        [0, 0, 0, 0, 0, 0],
-                                    ])
-                                }),
+                                Events::new().on_click(self, |_| Msg::ResetGrowth),
                                 vec![Html::text("成長をリセット")],
                             ),
                         ],
