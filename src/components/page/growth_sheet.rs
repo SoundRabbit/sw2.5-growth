@@ -79,6 +79,7 @@ impl Update for GrowthSheet {
                 for p in 0..6 {
                     for s in 0..6 {
                         self.attr.growth_dice[p][s] = 0;
+                        self.attr.growth[p][s] = 0;
                     }
                 }
 

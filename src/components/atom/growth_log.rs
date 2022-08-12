@@ -82,6 +82,8 @@ impl GrowthLog {
                             String::from("　　")
                         }
                     ));
+                } else {
+                    items.push(String::new());
                 }
             }
             lists.push(items);
