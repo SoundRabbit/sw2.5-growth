@@ -3,11 +3,31 @@ pub struct AttrGrowth {
     pub raw_growth_dice: Vec<[usize; 2]>,
     pub growth_dice: [[i32; 6]; 6],
     pub growth: [[i32; 6]; 6],
-    pub attrs: [i32; 6],
-    pub attr_mods: [i32; 6],
 }
 
 impl AttrGrowth {
+    pub fn new() -> Self {
+        Self {
+            raw_growth_dice: vec![],
+            growth_dice: [
+                [0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0],
+            ],
+            growth: [
+                [0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0],
+            ],
+        }
+    }
+
     pub fn validate_attr(attr: usize) -> bool {
         attr < 6
     }

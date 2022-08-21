@@ -7,7 +7,7 @@ use kagura::prelude::*;
 use nusa::prelude::*;
 
 pub struct Props {
-    pub attr: AttrGrowth,
+    pub growth: AttrGrowth,
 }
 
 pub enum Msg {}
@@ -15,7 +15,7 @@ pub enum Msg {}
 pub enum On {}
 
 pub struct GrowthLog {
-    attr: AttrGrowth,
+    growth: AttrGrowth,
 }
 
 impl Component for GrowthLog {
@@ -28,13 +28,15 @@ impl HtmlComponent for GrowthLog {}
 
 impl Constructor for GrowthLog {
     fn constructor(props: Self::Props) -> Self {
-        Self { attr: props.attr }
+        Self {
+            growth: props.growth,
+        }
     }
 }
 
 impl Update for GrowthLog {
     fn on_load(mut self: Pin<&mut Self>, props: Self::Props) -> Cmd<Self> {
-        self.attr = props.attr;
+        self.growth = props.growth;
         Cmd::none()
     }
 }
@@ -61,12 +63,12 @@ impl GrowthLog {
 
     fn render_pre(&self) -> Html {
         let mut lists = vec![];
-        let mut growth = self.attr.growth.clone();
+        let mut growth = self.growth.growth.clone();
 
-        for n in (0..self.attr.raw_growth_dice.len()).step_by(20) {
+        for n in (0..self.growth.raw_growth_dice.len()).step_by(20) {
             let mut items = vec![];
             for i in n..(n + 20) {
-                if let Some(a) = self.attr.raw_growth_dice.get(i) {
+                if let Some(a) = self.growth.raw_growth_dice.get(i) {
                     items.push(format!(
                         "#{:>03}：[{}, {}]…{}",
                         i + 1,

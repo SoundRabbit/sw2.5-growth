@@ -1,5 +1,5 @@
 use super::atom::btn::Btn;
-use crate::model::attr_growth::AttrGrowth;
+use crate::model::{attr::Attrs, attr_growth::AttrGrowth};
 use isaribi::{
     style,
     styled::{Style, Styled},
@@ -8,21 +8,36 @@ use kagura::prelude::*;
 use nusa::prelude::*;
 
 pub struct Props {
-    pub attr: AttrGrowth,
+    pub birth: Attrs,
+    pub init: Attrs,
+    pub mods: Attrs,
+    pub growth: AttrGrowth,
 }
 
 pub enum Msg {
     GrowthAlloc(usize, usize),
-    SetAttr(usize, i32),
-    SetAttrMod(usize, i32),
+
+    SetBirthSelection(usize),
+    SetInitSelection(usize),
+    SetModsSelection(usize),
+
+    SetBirth(usize, usize, i32),
+    SetInit(usize, usize, i32),
+    SetMods(usize, usize, i32),
 }
 
 pub enum On {
+    SetBirth(Attrs),
+    SetInit(Attrs),
+    SetMods(Attrs),
     SetAttrGrowth(AttrGrowth),
 }
 
 pub struct GrowthAlloc {
-    attr: AttrGrowth,
+    birth: Attrs,
+    init: Attrs,
+    mods: Attrs,
+    growth: AttrGrowth,
 }
 
 impl Component for GrowthAlloc {
@@ -35,13 +50,21 @@ impl HtmlComponent for GrowthAlloc {}
 
 impl Constructor for GrowthAlloc {
     fn constructor(props: Self::Props) -> Self {
-        Self { attr: props.attr }
+        Self {
+            birth: props.birth,
+            init: props.init,
+            mods: props.mods,
+            growth: props.growth,
+        }
     }
 }
 
 impl Update for GrowthAlloc {
     fn on_load(mut self: Pin<&mut Self>, props: Props) -> Cmd<Self> {
-        self.attr = props.attr;
+        self.birth = props.birth;
+        self.init = props.init;
+        self.mods = props.mods;
+        self.growth = props.growth;
 
         Cmd::none()
     }
@@ -49,19 +72,45 @@ impl Update for GrowthAlloc {
     fn update(mut self: Pin<&mut Self>, msg: Self::Msg) -> Cmd<Self> {
         match msg {
             Msg::GrowthAlloc(p, s) => {
-                if self.attr.growth([p, s]) {
-                    Cmd::submit(On::SetAttrGrowth(self.attr.clone()))
+                if self.growth.growth([p, s]) {
+                    Cmd::submit(On::SetAttrGrowth(self.growth.clone()))
                 } else {
                     Cmd::none()
                 }
             }
-            Msg::SetAttr(i, v) => {
-                self.attr.attrs[i] = v;
-                Cmd::submit(On::SetAttrGrowth(self.attr.clone()))
+
+            Msg::SetBirthSelection(n) => {
+                self.birth.selecting = n;
+                Cmd::submit(On::SetBirth(self.birth.clone()))
             }
-            Msg::SetAttrMod(i, v) => {
-                self.attr.attr_mods[i] = v;
-                Cmd::submit(On::SetAttrGrowth(self.attr.clone()))
+
+            Msg::SetInitSelection(n) => {
+                self.init.selecting = n;
+                Cmd::submit(On::SetInit(self.init.clone()))
+            }
+
+            Msg::SetModsSelection(n) => {
+                self.mods.selecting = n;
+                Cmd::submit(On::SetMods(self.mods.clone()))
+            }
+
+            Msg::SetBirth(n, i, v) => {
+                if let Some(attrs) = self.birth.attrs_list.get_mut(n) {
+                    attrs[i] = v;
+                }
+                Cmd::submit(On::SetBirth(self.birth.clone()))
+            }
+            Msg::SetInit(n, i, v) => {
+                if let Some(attrs) = self.init.attrs_list.get_mut(n) {
+                    attrs[i] = v;
+                }
+                Cmd::submit(On::SetInit(self.init.clone()))
+            }
+            Msg::SetMods(n, i, v) => {
+                if let Some(attrs) = self.mods.attrs_list.get_mut(n) {
+                    attrs[i] = v;
+                }
+                Cmd::submit(On::SetMods(self.mods.clone()))
             }
         }
     }
@@ -71,7 +120,15 @@ impl Render<Html> for GrowthAlloc {
     type Children = ();
     fn render(&self, _children: Self::Children) -> Html {
         Self::styled(Html::div(
-            Attributes::new().class(Self::class("tabular")),
+            Attributes::new().class(Self::class("tabular")).style(
+                "grid-template-columns",
+                format!(
+                    "repeat({}, max-content)",
+                    13 + self.birth.attrs_list.len()
+                        + self.init.attrs_list.len()
+                        + self.mods.attrs_list.len()
+                ),
+            ),
             Events::new(),
             self.render_tabular(),
         ))
@@ -85,6 +142,16 @@ impl GrowthAlloc {
 
     fn text(text: impl Into<String>) -> Html {
         Html::div(Attributes::new(), Events::new(), vec![Html::text(text)])
+    }
+
+    fn text_select(is_selecting: bool, events: Events, text: impl Into<String>) -> Html {
+        Html::div(
+            Attributes::new()
+                .class(Self::class("selectable"))
+                .string("data-selecting", is_selecting.to_string()),
+            events,
+            vec![Self::text(text)],
+        )
     }
 
     fn cell_text(attrs: Attributes, text: impl Into<String>) -> Html {
@@ -110,15 +177,35 @@ impl GrowthAlloc {
         let mut cells = vec![];
 
         let sum_of_growth = self
-            .attr
+            .growth
             .growth
             .iter()
             .fold(0, |sum, gs| sum + gs.iter().fold(0, |sum, g| sum + g));
 
         cells.push(Self::empty());
-        cells.push(Self::text("自然能力値"));
+        for n in 0..self.birth.attrs_list.len() {
+            cells.push(Self::text_select(
+                n == self.birth.selecting,
+                Events::new().on_click(self, move |_| Msg::SetBirthSelection(n)),
+                format!("生まれ {}", n + 1),
+            ));
+        }
         cells.push(Self::empty());
-        cells.push(Self::text("能力値修正"));
+        for n in 0..self.init.attrs_list.len() {
+            cells.push(Self::text_select(
+                n == self.init.selecting,
+                Events::new().on_click(self, move |_| Msg::SetInitSelection(n)),
+                format!("初期値 {}", n + 1),
+            ));
+        }
+        cells.push(Self::empty());
+        for n in 0..self.mods.attrs_list.len() {
+            cells.push(Self::text_select(
+                n == self.mods.selecting,
+                Events::new().on_click(self, move |_| Msg::SetModsSelection(n)),
+                format!("修正 {}", n + 1),
+            ));
+        }
         cells.push(Self::empty());
         cells.push(Html::div(
             Attributes::new(),
@@ -139,44 +226,67 @@ impl GrowthAlloc {
         cells.push(Self::text("能力値合計"));
 
         for p in 0..6 {
-            let growth_count = self.attr.growth[p].iter().fold(0, |g, sum| sum + g);
-            let attr = self.attr.attrs[p];
-            let attr_mod = self.attr.attr_mods[p];
+            let growth_count = self.growth.growth[p].iter().fold(0, |g, sum| sum + g);
             cells.push(Self::cell_text(
                 Attributes::new().class(Self::class(format!("n{}", p).as_str())),
                 Self::attr_text(p),
             ));
-            cells.push(Html::input(
-                Attributes::new()
-                    .class(Self::class("cell-input"))
-                    .class(Self::class(format!("n{}", p).as_str()))
-                    .value(attr.to_string())
-                    .type_("number")
-                    .nut("step", 1),
-                Events::new().on_input(self, move |a| {
-                    a.parse::<i32>()
-                        .ok()
-                        .map(move |a| Msg::SetAttr(p, a))
-                        .unwrap_or(Msg::SetAttr(p, attr))
-                }),
-                vec![],
-            ));
+            for n in 0..self.birth.attrs_list.len() {
+                let birth = self.birth.attrs_list[n][p];
+                cells.push(Html::input(
+                    Attributes::new()
+                        .class(Self::class("cell-input"))
+                        .class(Self::class(format!("n{}", p).as_str()))
+                        .value(birth.to_string())
+                        .type_("number")
+                        .nut("step", 1),
+                    Events::new().on_input(self, move |a| {
+                        a.parse::<i32>()
+                            .ok()
+                            .map(move |a| Msg::SetBirth(n, p, a))
+                            .unwrap_or(Msg::SetBirth(n, p, birth))
+                    }),
+                    vec![],
+                ));
+            }
             cells.push(Self::text("＋"));
-            cells.push(Html::input(
-                Attributes::new()
-                    .class(Self::class("cell-input"))
-                    .class(Self::class(format!("n{}", p).as_str()))
-                    .value(attr_mod.to_string())
-                    .type_("number")
-                    .nut("step", 1),
-                Events::new().on_input(self, move |a| {
-                    a.parse::<i32>()
-                        .ok()
-                        .map(move |a| Msg::SetAttrMod(p, a))
-                        .unwrap_or(Msg::SetAttrMod(p, attr_mod))
-                }),
-                vec![],
-            ));
+            for n in 0..self.init.attrs_list.len() {
+                let init = self.init.attrs_list[n][p];
+                cells.push(Html::input(
+                    Attributes::new()
+                        .class(Self::class("cell-input"))
+                        .class(Self::class(format!("n{}", p).as_str()))
+                        .value(init.to_string())
+                        .type_("number")
+                        .nut("step", 1),
+                    Events::new().on_input(self, move |a| {
+                        a.parse::<i32>()
+                            .ok()
+                            .map(move |a| Msg::SetInit(n, p, a))
+                            .unwrap_or(Msg::SetInit(n, p, init))
+                    }),
+                    vec![],
+                ));
+            }
+            cells.push(Self::text("＋"));
+            for n in 0..self.mods.attrs_list.len() {
+                let mods = self.mods.attrs_list[n][p];
+                cells.push(Html::input(
+                    Attributes::new()
+                        .class(Self::class("cell-input"))
+                        .class(Self::class(format!("n{}", p).as_str()))
+                        .value(mods.to_string())
+                        .type_("number")
+                        .nut("step", 1),
+                    Events::new().on_input(self, move |a| {
+                        a.parse::<i32>()
+                            .ok()
+                            .map(move |a| Msg::SetMods(n, p, a))
+                            .unwrap_or(Msg::SetMods(n, p, mods))
+                    }),
+                    vec![],
+                ));
+            }
             cells.push(Self::text("＋"));
             cells.push(Self::cell_text(
                 Attributes::new().class(if growth_count > 0 {
@@ -189,13 +299,13 @@ impl GrowthAlloc {
 
             for s in 0..6 {
                 let count = (
-                    self.attr.growth_dice[usize::min(p, s)][usize::max(p, s)]
-                        - self.attr.count_used([p, s]),
-                    self.attr.growth_dice[usize::min(p, s)][usize::max(p, s)],
+                    self.growth.growth_dice[usize::min(p, s)][usize::max(p, s)]
+                        - self.growth.count_used([p, s]),
+                    self.growth.growth_dice[usize::min(p, s)][usize::max(p, s)],
                 );
                 let growthable = (
-                    self.attr.count_growthable(true, [p, s]),
-                    self.attr.count_growthable(false, [p, s]),
+                    self.growth.count_growthable(true, [p, s]),
+                    self.growth.count_growthable(false, [p, s]),
                 );
 
                 cells.push(Btn::no_valiant(
@@ -206,7 +316,7 @@ impl GrowthAlloc {
                                 "{}{}",
                                 if count.1 == 0 && growthable.1 == 0 {
                                     "n"
-                                } else if self.attr.growth[p][s] == 0 {
+                                } else if self.growth.growth[p][s] == 0 {
                                     "t"
                                 } else {
                                     "g"
@@ -217,7 +327,7 @@ impl GrowthAlloc {
                         )),
                     Events::new().on_click(self, move |_| Msg::GrowthAlloc(p, s)),
                     vec![
-                        Html::text(self.attr.growth[p][s].to_string()),
+                        Html::text(self.growth.growth[p][s].to_string()),
                         Html::element("br", Attributes::new(), Events::new(), vec![]),
                         Html::text(format!(
                             "{}/{}({}/{})",
@@ -230,7 +340,11 @@ impl GrowthAlloc {
             cells.push(Self::text("＝"));
             cells.push(Self::cell_text(
                 Attributes::new().class(Self::class(format!("n{}", p).as_str())),
-                (attr + attr_mod + growth_count).to_string(),
+                (self.birth.attrs().map(|a| a[p]).unwrap_or(0)
+                    + self.init.attrs().map(|a| a[p]).unwrap_or(0)
+                    + self.mods.attrs().map(|a| a[p]).unwrap_or(0)
+                    + growth_count)
+                    .to_string(),
             ));
         }
 
@@ -245,7 +359,6 @@ impl Styled for GrowthAlloc {
         style! {
             ".tabular" {
                 "display": "grid";
-                "grid-template-columns": "repeat(14, max-content)";
                 "grid-template-rows": "repeat(8, max-content)";
                 "align-items": "center";
                 "justify-items": "center";
@@ -270,6 +383,26 @@ impl Styled for GrowthAlloc {
                 "justify-self": "stretch";
                 "align-self": "stretch";
                 "max-width": "6em";
+            }
+
+            ".selectable" {
+                "justify-self": "stretch";
+                "align-self": "stretch";
+                "display": "flex";
+                "justify-content": "center";
+                "align-items": "center";
+            }
+
+            ".selectable:hover" {
+                "cursor": "pointer";
+            }
+
+            r#".selectable[data-selecting="false"]"# {
+                "background-color": "#c5f6fa";
+            }
+
+            r#".selectable[data-selecting="true"]"# {
+                "background-color": "#22b8cf";
             }
 
             ".n0" {

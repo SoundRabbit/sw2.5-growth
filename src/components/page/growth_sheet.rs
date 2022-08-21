@@ -4,7 +4,7 @@ use super::atom::{
 };
 use super::molecule::growth_alloc::{self, GrowthAlloc};
 use super::template::basic_page::{self, BasicPage};
-use crate::model::attr_growth::AttrGrowth;
+use crate::model::{attr::Attrs, attr_growth::AttrGrowth};
 use isaribi::{
     style,
     styled::{Style, Styled},
@@ -18,12 +18,18 @@ pub enum Msg {
     SetGrowthDice(String),
     ResetGrowth,
     SetAttrGrowth(AttrGrowth),
+    SetBirth(Attrs),
+    SetInit(Attrs),
+    SetMods(Attrs),
 }
 
 pub enum On {}
 
 pub struct GrowthSheet {
-    attr: AttrGrowth,
+    birth: Attrs,
+    init: Attrs,
+    mods: Attrs,
+    growth: AttrGrowth,
 }
 
 impl Component for GrowthSheet {
@@ -37,27 +43,10 @@ impl HtmlComponent for GrowthSheet {}
 impl Constructor for GrowthSheet {
     fn constructor(_props: Self::Props) -> Self {
         Self {
-            attr: AttrGrowth {
-                attrs: [0, 0, 0, 0, 0, 0],
-                attr_mods: [0, 0, 0, 0, 0, 0],
-                raw_growth_dice: vec![],
-                growth_dice: [
-                    [0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0],
-                ],
-                growth: [
-                    [0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0],
-                ],
-            },
+            birth: Attrs::new(3),
+            init: Attrs::new(3),
+            mods: Attrs::new(3),
+            growth: AttrGrowth::new(),
         }
     }
 }
@@ -75,35 +64,47 @@ impl Update for GrowthSheet {
                     }
                 }
 
-                self.attr.raw_growth_dice.clear();
+                self.growth.raw_growth_dice.clear();
                 for p in 0..6 {
                     for s in 0..6 {
-                        self.attr.growth_dice[p][s] = 0;
-                        self.attr.growth[p][s] = 0;
+                        self.growth.growth_dice[p][s] = 0;
+                        self.growth.growth[p][s] = 0;
                     }
                 }
 
                 for i in 0..(dices.len() / 2) {
                     let p = dices[i * 2];
                     let s = dices[i * 2 + 1];
-                    self.attr
+                    self.growth
                         .raw_growth_dice
                         .push([usize::min(p, s), usize::max(p, s)]);
-                    self.attr.growth_dice[usize::min(p, s)][usize::max(p, s)] += 1;
+                    self.growth.growth_dice[usize::min(p, s)][usize::max(p, s)] += 1;
                 }
 
                 for i in 0..6 {
-                    self.attr.growth[i][i] = self.attr.growth_dice[i][i];
+                    self.growth.growth[i][i] = self.growth.growth_dice[i][i];
                 }
 
                 Cmd::none()
             }
             Msg::SetAttrGrowth(attr) => {
-                self.attr = attr;
+                self.growth = attr;
+                Cmd::none()
+            }
+            Msg::SetBirth(birth) => {
+                self.birth = birth;
+                Cmd::none()
+            }
+            Msg::SetInit(init) => {
+                self.init = init;
+                Cmd::none()
+            }
+            Msg::SetMods(mods) => {
+                self.mods = mods;
                 Cmd::none()
             }
             Msg::ResetGrowth => {
-                self.attr.growth = [
+                self.growth.growth = [
                     [0, 0, 0, 0, 0, 0],
                     [0, 0, 0, 0, 0, 0],
                     [0, 0, 0, 0, 0, 0],
@@ -112,7 +113,7 @@ impl Update for GrowthSheet {
                     [0, 0, 0, 0, 0, 0],
                 ];
                 for i in 0..6 {
-                    self.attr.growth[i][i] = self.attr.growth_dice[i][i];
+                    self.growth.growth[i][i] = self.growth.growth_dice[i][i];
                 }
                 Cmd::none()
             }
@@ -153,12 +154,18 @@ impl Render<Html> for GrowthSheet {
                                 self,
                                 None,
                                 growth_alloc::Props {
-                                    attr: self.attr.clone(),
+                                    birth: self.birth.clone(),
+                                    init: self.init.clone(),
+                                    mods: self.mods.clone(),
+                                    growth: self.growth.clone(),
                                 },
                                 Sub::map(|sub| match sub {
                                     growth_alloc::On::SetAttrGrowth(attr) => {
                                         Msg::SetAttrGrowth(attr)
                                     }
+                                    growth_alloc::On::SetBirth(birth) => Msg::SetBirth(birth),
+                                    growth_alloc::On::SetInit(init) => Msg::SetInit(init),
+                                    growth_alloc::On::SetMods(mods) => Msg::SetMods(mods),
                                 }),
                             ),
                             Btn::with_valiant(
@@ -173,7 +180,7 @@ impl Render<Html> for GrowthSheet {
                         self,
                         None,
                         growth_log::Props {
-                            attr: self.attr.clone(),
+                            growth: self.growth.clone(),
                         },
                         Sub::none(),
                     ),
